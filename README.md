@@ -18,7 +18,7 @@ var xhr=new XMLHttpRequest;xhr.open("get","https://raw.githubusercontent.com/Tea
 This method should automatically load the script on page load. 
 
 1. Install Greasemonkey Browser Addon (or alternative)
-2. [Click here to install](https://raw.githubusercontent.com/TeaWithLucas/Herosaver/master/herosaver-autoloader.user.js "Click to install"), Link to repository: [herosaver-autoloader.user.js](herosaver-autoloader.user.js)
+2. [Click here to install](https://raw.githubusercontent.com/notnullgames/Herosaver/master/herosaver-autoloader.user.js "Click to install"), Link to repository: [herosaver-autoloader.user.js](herosaver-autoloader.user.js)
 3. The install window should pop up, check "Open editor after install completes" if you want to add domains, then click install.
 4. If it doesn't pop up an install window, either Greasemonkey isn't installed or another problem has occured, you can try adding the script manually.
 
