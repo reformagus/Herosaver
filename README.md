@@ -9,7 +9,7 @@ This is based on some ideas from github-user TeaWithLucas, with a focus on makin
 
 ## Usage
 
-Learn more about how to use this, [here](TODO)
+Learn more about how to use this, [here](https://notnullgames.github.io/Herosaver/)
 
 ## development
 
