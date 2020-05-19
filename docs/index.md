@@ -10,13 +10,19 @@ This is based on some ideas from [TeaWithLucas](https://github.com/TeaWithLucas)
 
 ### Bookmarklet
 
-You can drag these to your bookmarks:
+You can drag these to your bookmark-bar:
 
 - [Hero STL](javascript:(() => fetch('https://raw.githubusercontent.com/notnullgames/Herosaver/master/dist/herosaver.js').then(r => r.text()).then(eval).then(() => saveStl()))())
 - [Hero OBJ](javascript:(() => fetch('https://raw.githubusercontent.com/notnullgames/Herosaver/master/dist/herosaver.js').then(r => r.text()).then(eval).then(() => saveObj()))())
 
 
+Go to the page and click the bookmarklet, and it will save the file for you.
+
+
 ### Browser Console
+
+You can also use the developer-console, if you like.
+
   1. Go to the intended website
   2. Open the Javascript Console [F12], then click on Console
   3. Paste the following
