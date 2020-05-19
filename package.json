@@ -1,26 +1,30 @@
 {
-  "name": "rollup-starter-lib",
-  "version": "1.0.0",
-  "browser": "dist/saver.min.js",
+  "name": "herosaver",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Save Configuration and STLs from websites using the THREE.JS framework for academic and educational purposes.",
+  "scripts": {
+    "start": "parcel src/herosaver.js",
+    "build": "parcel build src/herosaver.js",
+    "lint": "standard --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notnullgames/Herosaver.git"
+  },
+  "keywords": [],
+  "author": "David Konsumer <konsumer@jetboystudio.com> (http://konsumer.js.org)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/notnullgames/Herosaver/issues"
+  },
+  "homepage": "https://github.com/notnullgames/Herosaver#readme",
   "dependencies": {
-    "arrive": "^2.4.1",
     "file-saver": "^2.0.2",
-    "jquery": "^3.4.1",
-    "three": "^0.109.0"
+    "three": "^0.116.1"
   },
   "devDependencies": {
-    "rollup": "^1.24.0",
-    "rollup-plugin-commonjs": "^10.1.0",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-replace": "^2.2.0",
-    "rollup-plugin-terser": "^5.1.1"
-  },
-  "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
-    "pretest": "npm run build"
-  },
-  "files": [
-    "dist"
-  ]
+    "parcel-bundler": "^1.12.4",
+    "standard": "^14.3.4"
+  }
 }
