@@ -4,7 +4,7 @@ Methodology to Save Configuration and STLs from websites using the THREE.JS fram
 
 Please **Always** think about the **developers** of such websites and try to **support them whenever possible**, as without them, there would be no such tools.
 
-This is based on some ideas from [TeaWithLucas](https://github.com/TeaWithLucas), with a focus on making UI lighter & code simpler. It had some issues exporting the current format, so I modernized it a bit, and made it work with current site.
+This is based on some ideas from [TeaWithLucas](https://github.com/TeaWithLucas), with a focus on making UI lighter & code simpler. I modernized the code a bit (`class`, `let`, `const`, arrow-fucntions, etc) and got rid of the inline UI (I like it better as a bookmarklet.)
 
 ## Usage
 
