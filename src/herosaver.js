@@ -82,11 +82,12 @@ window.debugSkin = () => {
   console.log('Expected: right toe area, roughly [-0.41..0.06..0.75] or post-transform')
 }
 
-// export character as STL file
+// export character as STL file (binary to avoid JS string length limits on large models)
 window.saveStl = subdivisions => {
   const group = process(character, subdivisions, !!character.data.mirroredPose)
   const exporter = new STLExporter()
-  saveAs(new Blob([exporter.parse(group)], { type: 'application/sla;charset=utf-8' }), `${getName()}.stl`)
+  const buffer = exporter.parse(group, { binary: true })
+  saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${getName()}.stl`)
 }
 
 // export character as OBJ file
