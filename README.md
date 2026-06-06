@@ -4,12 +4,12 @@ Methodology to Save Configuration and STLs from websites using the THREE.JS fram
 
 Please **Always** think about the **developers** of such websites and try to **support them whenever possible**, as without them, there would be no such tools.
 
-This is based on some ideas from [TeaWithLucas](https://github.com/TeaWithLucas), with a focus on making UI lighter & code simpler. I modernized the code a bit (`class`, `let`, `const`, arrow-fucntions, etc) and got rid of the inline UI (I like it better as a bookmarklet.)
+This is based on some ideas from [TeaWithLucas](https://github.com/TeaWithLucas), and refined by [reformagus] (https://github.com/reformagus/Herosaver).
 
 
 ## Tampermonkey
 
-If you prefer a userscript over the bookmarklet, install [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Firefox, Edge, Safari) or any compatible userscript manager, then:
+Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Firefox, Edge, Safari) or any compatible userscript manager, then:
 
 ### One-click install
 
@@ -27,6 +27,4 @@ Alternatively, open the Tampermonkey dashboard, click **Create a new script**, a
 
 Go to the target page, open the Tampermonkey menu in the toolbar, and click **Herosaver: Save STL** or **Herosaver: Save OBJ**.
 
-## todo
-
-- add greasemonkey support back
+Files need to be opened in Blender or similar 3D software to reveal model contained within cube mesh.  Export your final file from there.
