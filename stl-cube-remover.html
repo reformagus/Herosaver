@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hero Cleaner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #111827;
+  color: #e5e7eb;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  padding: 10px 20px;
+  background: #1f2937;
+  border-bottom: 1px solid #374151;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+header h1 { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+header p { font-size: 0.75rem; color: #6b7280; }
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 300px;
+  background: #1f2937;
+  border-right: 1px solid #374151;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-inner {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed #374151;
+  border-radius: 10px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.drop-zone .dz-icon { font-size: 2rem; margin-bottom: 8px; }
+.drop-zone .dz-title { font-size: 0.9rem; font-weight: 600; color: #60a5fa; margin-bottom: 4px; }
+.drop-zone .dz-sub { font-size: 0.75rem; color: #6b7280; }
+
+/* Section */
+.section-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* Component cards */
+.component-list { display: flex; flex-direction: column; gap: 6px; }
+
+.component-card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.card-body { flex: 1; min-width: 0; }
+.card-name { font-size: 0.83rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.card-stats { font-size: 0.7rem; color: #9ca3af; margin-top: 3px; line-height: 1.5; }
+
+.pill {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+}
+.pill-cube { background: #ef4444; color: white; }
+.pill-figure { background: #22c55e; color: white; }
+
+/* Toggle */
+.toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.toggle-label {
+  font-size: 0.6rem;
+  color: #6b7280;
+}
+
+.toggle {
+  position: relative;
+  width: 34px;
+  height: 18px;
+}
+
+.toggle input { display: none; }
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #374151;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-track::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #9ca3af;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .toggle-track { background: #1d4ed8; }
+.toggle input:checked + .toggle-track::before {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-primary { background: #2563eb; color: white; }
+.btn-primary:hover:not(:disabled) { background: #3b82f6; }
+.btn-primary:disabled { background: #1f2937; color: #4b5563; cursor: not-allowed; border: 1px solid #374151; }
+
+.btn-secondary { background: #374151; color: #d1d5db; font-size: 0.78rem; }
+.btn-secondary:hover { background: #4b5563; }
+
+/* Overlay */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  background: #111827;
+  pointer-events: none;
+  z-index: 10;
+}
+.overlay .ov-icon { font-size: 3rem; opacity: 0.3; }
+.overlay p { font-size: 0.85rem; color: #6b7280; }
+
+/* Spinner */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #374151;
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Status bar */
+.status-bar {
+  padding: 5px 16px;
+  background: #111827;
+  border-top: 1px solid #1f2937;
+  font-size: 0.7rem;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+/* Hint */
+.hint {
+  font-size: 0.7rem;
+  color: #6b7280;
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: #111827;
+  border-radius: 6px;
+  border-left: 2px solid #2563eb;
+}
+
+/* Scrollbar */
+.sidebar-inner::-webkit-scrollbar { width: 4px; }
+.sidebar-inner::-webkit-scrollbar-track { background: transparent; }
+.sidebar-inner::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+
+/* Warning banner */
+.warning {
+  background: #451a03;
+  border: 1px solid #78350f;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
+/* Subdivision section */
+.subdiv-box {
+  background: #111827;
+  border-radius: 7px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.subdiv-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.83rem;
+  font-weight: 500;
+}
+.subdiv-check input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: #2563eb; }
+.subdiv-levels { display: flex; gap: 12px; }
+.subdiv-levels label { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; cursor: pointer; }
+.subdiv-levels input[type=radio] { accent-color: #2563eb; cursor: pointer; }
+.subdiv-estimate { font-size: 0.68rem; color: #9ca3af; line-height: 1.5; }
+.subdiv-estimate.warn { color: #f59e0b; }
+
+/* Grouped figure shells */
+.group-card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.group-header {
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.group-header:hover { background: rgba(255,255,255,0.03); }
+.group-chevron { font-size: 0.65rem; color: #6b7280; transition: transform 0.2s; margin-top: 3px; flex-shrink: 0; }
+.group-chevron.open { transform: rotate(90deg); }
+.group-body { display: none; }
+.group-body.open { display: block; }
+.component-card.in-group { border-radius: 0; border: none; border-top: 1px solid #1f2937; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Hero Cleaner</h1>
+    <p>Remove cube shells, export your heroes</p>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- Drop zone -->
+      <div>
+        <div class="drop-zone" id="dropZone">
+          <div class="dz-icon">📦</div>
+          <div class="dz-title">Drop STL file here</div>
+          <div class="dz-sub">or click to browse</div>
+        </div>
+        <input type="file" id="fileInput" accept=".stl" style="display:none">
+      </div>
+
+      <!-- Export Options -->
+      <div id="subdivSection" style="display:none">
+        <div class="section-label">Export Options</div>
+        <div class="subdiv-box">
+          <label class="subdiv-check">
+            <input type="checkbox" id="subdivEnabled">
+            <span>Smooth mesh (Loop subdivision)</span>
+          </label>
+          <div id="subdivControls" style="display:none">
+            <div class="subdiv-levels">
+              <label><input type="radio" name="subdivLevel" value="1" checked> Level 1</label>
+              <label><input type="radio" name="subdivLevel" value="2"> Level 2</label>
+            </div>
+            <div class="subdiv-estimate" id="subdivEstimate"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Components -->
+      <div id="componentsSection" style="display:none">
+        <div class="section-label">Detected Shells</div>
+        <div class="hint" id="shellHint"></div>
+        <div class="component-list" id="componentList" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Warning -->
+      <div class="warning" id="singleMeshWarning" style="display:none">
+        ⚠ Only one connected shell found. The cube and figure may be merged. If so, this tool can't separate them — try <em>Edit &rarr; Separate Shells</em> in Meshmixer first.
+      </div>
+
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-secondary" id="resetBtn" style="display:none">Load Different File</button>
+      <button class="btn btn-primary" id="exportBtn" disabled>Export Hero STL</button>
+    </div>
+  </div>
+
+  <div class="viewport">
+    <div class="overlay" id="overlay">
+      <div class="ov-icon">🗿</div>
+      <p>Load an STL to get started</p>
+    </div>
+    <div class="overlay" id="loadingOverlay" style="display:none">
+      <div class="spinner"></div>
+      <p id="loadingMsg">Parsing file…</p>
+    </div>
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">Ready — drag an STL file onto the window</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─── STL Parser ───────────────────────────────────────────────────────────────
+
+function parseSTL(buffer) {
+  // Detect binary vs ASCII: binary has exact size 84 + N*50
+  const dv = new DataView(buffer);
+  if (buffer.byteLength < 84) throw new Error('File too small to be a valid STL.');
+
+  const triCount = dv.getUint32(80, true);
+  const expectedSize = 84 + triCount * 50;
+
+  if (triCount > 0 && buffer.byteLength === expectedSize) {
+    return parseBinarySTL(dv, triCount);
+  }
+  const text = new TextDecoder('utf-8').decode(buffer);
+  if (text.trimStart().toLowerCase().startsWith('solid')) {
+    return parseASCIISTL(text);
+  }
+  // Fallback: try binary anyway
+  if (triCount > 0) return parseBinarySTL(dv, triCount);
+  throw new Error('Unrecognised STL format.');
+}
+
+function parseBinarySTL(dv, triCount) {
+  const triangles = [];
+  let o = 84;
+  for (let i = 0; i < triCount; i++) {
+    const nx = dv.getFloat32(o, true);
+    const ny = dv.getFloat32(o + 4, true);
+    const nz = dv.getFloat32(o + 8, true);
+    o += 12;
+    const verts = [];
+    for (let j = 0; j < 3; j++) {
+      verts.push([dv.getFloat32(o, true), dv.getFloat32(o + 4, true), dv.getFloat32(o + 8, true)]);
+      o += 12;
+    }
+    o += 2;
+    triangles.push({ normal: [nx, ny, nz], vertices: verts });
+  }
+  return triangles;
+}
+
+function parseASCIISTL(text) {
+  const triangles = [];
+  const facetRe = /facet normal\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)([\s\S]*?)endfacet/g;
+  const vertRe = /vertex\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)/g;
+  let fm;
+  while ((fm = facetRe.exec(text)) !== null) {
+    const normal = [parseFloat(fm[1]), parseFloat(fm[2]), parseFloat(fm[3])];
+    const block = fm[4];
+    const verts = [];
+    let vm;
+    vertRe.lastIndex = 0;
+    while ((vm = vertRe.exec(block)) !== null) {
+      verts.push([parseFloat(vm[1]), parseFloat(vm[2]), parseFloat(vm[3])]);
+    }
+    if (verts.length === 3) triangles.push({ normal, vertices: verts });
+  }
+  return triangles;
+}
+
+// ─── Connected Components ─────────────────────────────────────────────────────
+
+function quantize(v, f = 10000) {
+  return `${Math.round(v[0] * f)},${Math.round(v[1] * f)},${Math.round(v[2] * f)}`;
+}
+
+function findConnectedComponents(triangles) {
+  const n = triangles.length;
+  const visited = new Uint8Array(n);
+
+  // Build vertex → triangles adjacency
+  const vtMap = new Map();
+  for (let i = 0; i < n; i++) {
+    for (const v of triangles[i].vertices) {
+      const k = quantize(v);
+      if (!vtMap.has(k)) vtMap.set(k, []);
+      vtMap.get(k).push(i);
+    }
+  }
+
+  const components = [];
+  for (let start = 0; start < n; start++) {
+    if (visited[start]) continue;
+    const comp = [];
+    const queue = [start];
+    visited[start] = 1;
+    let qi = 0;
+    while (qi < queue.length) {
+      const ti = queue[qi++];
+      comp.push(ti);
+      for (const v of triangles[ti].vertices) {
+        for (const ni of (vtMap.get(quantize(v)) || [])) {
+          if (!visited[ni]) { visited[ni] = 1; queue.push(ni); }
+        }
+      }
+    }
+    components.push(comp);
+  }
+  return components;
+}
+
+// ─── Shell Analysis ───────────────────────────────────────────────────────────
+
+function analyzeShell(indices, triangles) {
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  let axisAligned = 0;
+
+  for (const i of indices) {
+    const { normal: [nx, ny, nz], vertices } = triangles[i];
+    const ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
+    if (ax > 0.85 || ay > 0.85 || az > 0.85) axisAligned++;
+    for (const [x, y, z] of vertices) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+  }
+
+  const sx = maxX - minX, sy = maxY - minY, sz = maxZ - minZ;
+  const dims = [sx, sy, sz].sort((a, b) => a - b);
+  // Aspect ratio score: 1.0 = perfect cube, lower = elongated
+  const aspectScore = dims[0] > 0 ? dims[0] / dims[2] : 0;
+  const axisScore = axisAligned / indices.length;
+  // Weighted cube score
+  const cubeScore = axisScore * 0.75 + aspectScore * 0.25;
+
+  return {
+    count: indices.length,
+    cubeScore, axisScore, aspectScore,
+    bounds: [minX, minY, minZ, maxX, maxY, maxZ],
+    volume: sx * sy * sz,
+    size: [sx, sy, sz],
+  };
+}
+
+// ─── STL Exporter ─────────────────────────────────────────────────────────────
+
+function writeBinarySTL(keptIndices, triangles) {
+  const n = keptIndices.length;
+  const buf = new ArrayBuffer(84 + n * 50);
+  const dv = new DataView(buf);
+  const enc = new TextEncoder();
+  const header = enc.encode('STL Cube Remover export');
+  new Uint8Array(buf).set(header, 0);
+  dv.setUint32(80, n, true);
+  let o = 84;
+  for (const i of keptIndices) {
+    const { normal: [nx, ny, nz], vertices } = triangles[i];
+    dv.setFloat32(o, nx, true); dv.setFloat32(o + 4, ny, true); dv.setFloat32(o + 8, nz, true); o += 12;
+    for (const [x, y, z] of vertices) {
+      dv.setFloat32(o, x, true); dv.setFloat32(o + 4, y, true); dv.setFloat32(o + 8, z, true); o += 12;
+    }
+    o += 2;
+  }
+  return buf;
+}
+
+// ─── STL Writer (direct triangle objects) ─────────────────────────────────────
+
+function writeBinarySTLDirect(triObjs) {
+  const n = triObjs.length;
+  const buf = new ArrayBuffer(84 + n * 50);
+  const dv = new DataView(buf);
+  new Uint8Array(buf).set(new TextEncoder().encode('Hero Cleaner export'), 0);
+  dv.setUint32(80, n, true);
+  let o = 84;
+  for (const { normal: [nx, ny, nz], vertices } of triObjs) {
+    dv.setFloat32(o, nx, true); dv.setFloat32(o+4, ny, true); dv.setFloat32(o+8, nz, true); o += 12;
+    for (const [x, y, z] of vertices) {
+      dv.setFloat32(o, x, true); dv.setFloat32(o+4, y, true); dv.setFloat32(o+8, z, true); o += 12;
+    }
+    o += 2;
+  }
+  return buf;
+}
+
+// ─── Loop Subdivision ─────────────────────────────────────────────────────────
+
+function edgeKey(a, b) { return a < b ? `${a},${b}` : `${b},${a}`; }
+
+function triNormal(va, vb, vc) {
+  const e1 = [vb[0]-va[0], vb[1]-va[1], vb[2]-va[2]];
+  const e2 = [vc[0]-va[0], vc[1]-va[1], vc[2]-va[2]];
+  const nx = e1[1]*e2[2] - e1[2]*e2[1];
+  const ny = e1[2]*e2[0] - e1[0]*e2[2];
+  const nz = e1[0]*e2[1] - e1[1]*e2[0];
+  const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+  return [nx/len, ny/len, nz/len];
+}
+
+function subdivideOnce(triangles) {
+  // Deduplicate vertices
+  const verts = [];
+  const vMap = new Map();
+  function vid(v) {
+    const k = quantize(v, 100000);
+    if (!vMap.has(k)) { vMap.set(k, verts.length); verts.push(v); }
+    return vMap.get(k);
+  }
+
+  const tvs = triangles.map(t => t.vertices.map(vid));
+  const origN = verts.length;
+
+  // Build edge → adjacent opposite-vertex map
+  const eMap = new Map();
+  tvs.forEach(tv => {
+    for (let e = 0; e < 3; e++) {
+      const a = tv[e], b = tv[(e+1)%3], c = tv[(e+2)%3];
+      const k = edgeKey(a, b);
+      if (!eMap.has(k)) eMap.set(k, { a, b, opp: [] });
+      eMap.get(k).opp.push(c);
+    }
+  });
+
+  // Per-vertex neighbors and boundary tracking
+  const nbrs = Array.from({length: origN}, () => new Set());
+  const bndryNbrs = Array.from({length: origN}, () => []);
+  const isBnd = new Uint8Array(origN);
+  for (const [, e] of eMap) {
+    nbrs[e.a].add(e.b); nbrs[e.b].add(e.a);
+    if (e.opp.length === 1) {
+      isBnd[e.a] = isBnd[e.b] = 1;
+      bndryNbrs[e.a].push(e.b);
+      bndryNbrs[e.b].push(e.a);
+    }
+  }
+
+  // Update original vertex positions (Loop rules)
+  const newV = verts.slice(0, origN).map((v, i) => {
+    if (isBnd[i]) {
+      const bn = bndryNbrs[i];
+      if (bn.length >= 2) {
+        const v1 = verts[bn[0]], v2 = verts[bn[1]];
+        return [(3/4)*v[0]+(1/8)*(v1[0]+v2[0]),
+                (3/4)*v[1]+(1/8)*(v1[1]+v2[1]),
+                (3/4)*v[2]+(1/8)*(v1[2]+v2[2])];
+      }
+      return [...v];
+    }
+    const nb = [...nbrs[i]], n = nb.length;
+    if (!n) return [...v];
+    const β = n === 3 ? 3/16 : 3/(8*n);
+    let sx=0, sy=0, sz=0;
+    nb.forEach(j => { sx+=verts[j][0]; sy+=verts[j][1]; sz+=verts[j][2]; });
+    return [(1-n*β)*v[0]+β*sx, (1-n*β)*v[1]+β*sy, (1-n*β)*v[2]+β*sz];
+  });
+
+  // Compute edge midpoints and assign indices
+  const allV = [...newV];
+  const eMid = new Map();
+  for (const [k, e] of eMap) {
+    const va = verts[e.a], vb = verts[e.b];
+    let pos;
+    if (e.opp.length >= 2) {
+      const vc = verts[e.opp[0]], vd = verts[e.opp[1]];
+      pos = [(3/8)*(va[0]+vb[0])+(1/8)*(vc[0]+vd[0]),
+             (3/8)*(va[1]+vb[1])+(1/8)*(vc[1]+vd[1]),
+             (3/8)*(va[2]+vb[2])+(1/8)*(vc[2]+vd[2])];
+    } else {
+      pos = [(va[0]+vb[0])/2, (va[1]+vb[1])/2, (va[2]+vb[2])/2];
+    }
+    eMid.set(k, allV.length);
+    allV.push(pos);
+  }
+
+  // Generate 4 sub-triangles per original triangle
+  const result = [];
+  tvs.forEach(([v0, v1, v2]) => {
+    const m01 = eMid.get(edgeKey(v0, v1));
+    const m12 = eMid.get(edgeKey(v1, v2));
+    const m20 = eMid.get(edgeKey(v2, v0));
+    [[v0,m01,m20],[v1,m12,m01],[v2,m20,m12],[m01,m12,m20]].forEach(([a,b,c]) => {
+      const va=allV[a], vb=allV[b], vc=allV[c];
+      result.push({ normal: triNormal(va,vb,vc), vertices: [va,vb,vc] });
+    });
+  });
+
+  return result;
+}
+
+function subdivide(triangles, levels) {
+  let tris = triangles;
+  for (let l = 0; l < levels; l++) tris = subdivideOnce(tris);
+  return tris;
+}
+
+// ─── Three.js Setup ───────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x111827);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100000);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dir1 = new THREE.DirectionalLight(0xffffff, 1.0);
+dir1.position.set(1, 2, 2); scene.add(dir1);
+const dir2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dir2.position.set(-2, -1, -1); scene.add(dir2);
+
+function resizeRenderer() {
+  const vp = canvas.parentElement;
+  const w = vp.clientWidth, h = vp.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+window.addEventListener('resize', resizeRenderer);
+resizeRenderer();
+
+(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+
+// ─── Color palette ────────────────────────────────────────────────────────────
+
+const PALETTE = [
+  { hex: 0xef4444, css: '#ef4444' }, // red
+  { hex: 0x60a5fa, css: '#60a5fa' }, // blue
+  { hex: 0x4ade80, css: '#4ade80' }, // green
+  { hex: 0xfbbf24, css: '#fbbf24' }, // amber
+  { hex: 0xa78bfa, css: '#a78bfa' }, // violet
+  { hex: 0x34d399, css: '#34d399' }, // emerald
+  { hex: 0xf472b6, css: '#f472b6' }, // pink
+  { hex: 0xfb923c, css: '#fb923c' }, // orange
+];
+
+// ─── App State ────────────────────────────────────────────────────────────────
+
+let allTriangles = [];
+let shells = [];       // array of triangle index arrays
+let shellInfo = [];    // array of analysis results
+let meshes = [];       // THREE.Mesh per shell
+let keep = [];         // bool per shell
+let srcFilename = '';
+
+// ─── Process File ─────────────────────────────────────────────────────────────
+
+async function processFile(file) {
+  srcFilename = file.name;
+  showLoading('Parsing STL…');
+
+  await tick();
+
+  let triangles;
+  try {
+    const buf = await file.arrayBuffer();
+    triangles = parseSTL(buf);
+  } catch (e) {
+    hideLoading();
+    setStatus('Error: ' + e.message);
+    return;
+  }
+
+  if (triangles.length === 0) {
+    hideLoading();
+    setStatus('No triangles found in file.');
+    return;
+  }
+
+  allTriangles = triangles;
+  setLoadingMsg(`Finding connected shells…`);
+  await tick();
+
+  shells = findConnectedComponents(triangles);
+  shellInfo = shells.map(s => analyzeShell(s, triangles));
+
+  // Sort shells by volume descending (largest first)
+  const order = shellInfo.map((_, i) => i).sort((a, b) => shellInfo[b].volume - shellInfo[a].volume);
+  shells = order.map(i => shells[i]);
+  shellInfo = order.map(i => shellInfo[i]);
+
+  // Auto-detect cube: highest cubeScore, but only among shells with significant face count
+  const totalFaces = triangles.length;
+  keep = shellInfo.map(() => true);
+
+  // Find the most cube-like shell (that has at least 0.5% of total faces)
+  let bestCubeIdx = -1;
+  let bestCubeScore = 0;
+  shellInfo.forEach((info, i) => {
+    if (info.count / totalFaces >= 0.005 && info.cubeScore > bestCubeScore) {
+      bestCubeScore = info.cubeScore;
+      bestCubeIdx = i;
+    }
+  });
+
+  // Only auto-remove if score is convincingly cube-like (>0.65)
+  if (bestCubeIdx >= 0 && bestCubeScore > 0.65) {
+    keep[bestCubeIdx] = false;
+  }
+
+  setLoadingMsg('Building 3D view…');
+  await tick();
+
+  buildScene();
+  buildUI();
+
+  hideLoading();
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('exportBtn').disabled = false;
+  document.getElementById('resetBtn').style.display = '';
+
+  updateStatus();
+}
+
+function tick() { return new Promise(r => setTimeout(r, 16)); }
+
+// ─── Scene ────────────────────────────────────────────────────────────────────
+
+function buildScene() {
+  for (const m of meshes) { m.geometry.dispose(); m.material.dispose(); scene.remove(m); }
+  meshes = [];
+
+  for (let ci = 0; ci < shells.length; ci++) {
+    const indices = shells[ci];
+    const color = PALETTE[ci % PALETTE.length];
+
+    const pos = [], nor = [];
+    for (const i of indices) {
+      const { normal: [nx, ny, nz], vertices } = allTriangles[i];
+      for (const [x, y, z] of vertices) {
+        pos.push(x, y, z);
+        nor.push(nx, ny, nz);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+
+    const mat = new THREE.MeshPhongMaterial({
+      color: color.hex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: keep[ci] ? 1.0 : 0.08,
+      depthWrite: keep[ci],
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    meshes.push(mesh);
+  }
+
+  // Fit camera
+  const box = new THREE.Box3();
+  meshes.forEach(m => box.expandByObject(m));
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  controls.target.copy(center);
+  camera.position.copy(center).add(new THREE.Vector3(0, 0, maxDim * 1.8));
+  camera.near = maxDim * 0.0001;
+  camera.far = maxDim * 200;
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+function refreshMeshVisibility() {
+  for (let ci = 0; ci < meshes.length; ci++) {
+    const mat = meshes[ci].material;
+    mat.opacity = keep[ci] ? 1.0 : 0.08;
+    mat.depthWrite = keep[ci];
+    mat.needsUpdate = true;
+  }
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+
+let figureShellIndices = [];
+
+function buildUI() {
+  const list = document.getElementById('componentList');
+  list.innerHTML = '';
+  document.getElementById('componentsSection').style.display = 'block';
+  document.getElementById('subdivSection').style.display = 'block';
+
+  const hint = document.getElementById('shellHint');
+  hint.textContent = shells.length === 1
+    ? 'Only one shell found — see warning below.'
+    : `${shells.length} shells detected. Ghosted shells are excluded from export.`;
+
+  document.getElementById('singleMeshWarning').style.display = shells.length === 1 ? '' : 'none';
+
+  const cubeIs = shellInfo.map((_, i) => i).filter(i => shellInfo[i].cubeScore > 0.65);
+  figureShellIndices = shellInfo.map((_, i) => i).filter(i => shellInfo[i].cubeScore <= 0.65);
+
+  cubeIs.forEach(ci => renderShellCard(list, ci, false));
+  if (figureShellIndices.length > 0) renderFigureGroup(list, figureShellIndices);
+}
+
+function renderShellCard(container, ci, inGroup) {
+  const info = shellInfo[ci];
+  const color = PALETTE[ci % PALETTE.length];
+  const isCube = info.cubeScore > 0.65;
+  const dims = info.size.map(d => d.toFixed(1)).join(' × ');
+
+  const card = document.createElement('div');
+  card.className = 'component-card' + (inGroup ? ' in-group' : '');
+  card.innerHTML = `
+    <div class="card-swatch" style="background:${color.css}"></div>
+    <div class="card-body">
+      <div class="card-name">Shell ${ci + 1}
+        <span class="pill ${isCube ? 'pill-cube' : 'pill-figure'}">${isCube ? 'CUBE' : 'FIGURE'}</span>
+      </div>
+      <div class="card-stats">${info.count.toLocaleString()} faces · ${dims} mm${
+        !inGroup ? `<br>Cube score: ${(info.cubeScore * 100).toFixed(0)}%` : ''
+      }</div>
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label" id="tlabel-${ci}">${keep[ci] ? 'KEEP' : 'SKIP'}</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-${ci}" ${keep[ci] ? 'checked' : ''}>
+        <div class="toggle-track"></div>
+      </label>
+    </div>
+  `;
+  card.querySelector(`#toggle-${ci}`).addEventListener('change', function () {
+    keep[ci] = this.checked;
+    document.getElementById(`tlabel-${ci}`).textContent = this.checked ? 'KEEP' : 'SKIP';
+    refreshMeshVisibility();
+    updateStatus();
+    if (inGroup) syncGroupToggle();
+  });
+  container.appendChild(card);
+}
+
+function renderFigureGroup(container, indices) {
+  const totalFaces = indices.reduce((sum, i) => sum + shellInfo[i].count, 0);
+  const allKept = indices.every(i => keep[i]);
+
+  const swatches = indices.slice(0, 3).map(i =>
+    `<div class="card-swatch" style="background:${PALETTE[i % PALETTE.length].css};flex-shrink:0"></div>`
+  ).join('');
+
+  const group = document.createElement('div');
+  group.className = 'group-card';
+  group.innerHTML = `
+    <div class="group-header" id="groupHeader">
+      <span class="group-chevron" id="groupChevron">▶</span>
+      <div style="display:flex;gap:3px;margin-top:1px">${swatches}</div>
+      <div class="card-body">
+        <div class="card-name">Hero <span class="pill pill-figure">FIGURE</span></div>
+        <div class="card-stats">${indices.length} shell${indices.length > 1 ? 's' : ''} · ${totalFaces.toLocaleString()} faces</div>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-label" id="groupToggleLabel">${allKept ? 'KEEP' : 'SKIP'}</span>
+        <label class="toggle">
+          <input type="checkbox" id="groupToggle" ${allKept ? 'checked' : ''}>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+    <div class="group-body" id="groupBody"></div>
+  `;
+
+  const body = group.querySelector('#groupBody');
+  indices.forEach(ci => renderShellCard(body, ci, true));
+
+  const header = group.querySelector('#groupHeader');
+  const chevron = group.querySelector('#groupChevron');
+  const bodyEl = group.querySelector('#groupBody');
+  header.addEventListener('click', e => {
+    if (e.target.closest('label.toggle')) return;
+    bodyEl.classList.toggle('open');
+    chevron.classList.toggle('open');
+  });
+
+  const groupToggle = group.querySelector('#groupToggle');
+  const groupLabel = group.querySelector('#groupToggleLabel');
+  groupToggle.addEventListener('change', function () {
+    const val = this.checked;
+    groupLabel.textContent = val ? 'KEEP' : 'SKIP';
+    indices.forEach(ci => {
+      keep[ci] = val;
+      const cb = document.getElementById(`toggle-${ci}`);
+      const lb = document.getElementById(`tlabel-${ci}`);
+      if (cb) { cb.checked = val; lb.textContent = val ? 'KEEP' : 'SKIP'; }
+    });
+    refreshMeshVisibility();
+    updateStatus();
+  });
+
+  container.appendChild(group);
+}
+
+function syncGroupToggle() {
+  const gt = document.getElementById('groupToggle');
+  const gl = document.getElementById('groupToggleLabel');
+  if (!gt || !figureShellIndices.length) return;
+  const allKept = figureShellIndices.every(i => keep[i]);
+  const anyKept = figureShellIndices.some(i => keep[i]);
+  gt.indeterminate = anyKept && !allKept;
+  gt.checked = allKept;
+  gl.textContent = allKept ? 'KEEP' : anyKept ? 'MIX' : 'SKIP';
+}
+
+function updateStatus() {
+  const keptShells = keep.filter(Boolean).length;
+  const keptTris = shells.reduce((sum, s, i) => keep[i] ? sum + s.length : sum, 0);
+  setStatus(`${keptShells} of ${shells.length} shells kept — ${keptTris.toLocaleString()} triangles will be exported`);
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const keptIndices = [];
+  shells.forEach((s, i) => { if (keep[i]) keptIndices.push(...s); });
+
+  if (keptIndices.length === 0) {
+    setStatus('Nothing to export — toggle at least one shell ON.');
+    return;
+  }
+
+  const subdivEnabled = document.getElementById('subdivEnabled').checked;
+  const subdivLevel = subdivEnabled
+    ? parseInt(document.querySelector('input[name="subdivLevel"]:checked').value)
+    : 0;
+
+  const base = srcFilename.replace(/\.stl$/i, '');
+  let buf, triCount, suffix;
+
+  if (subdivLevel > 0) {
+    const baseTris = keptIndices.map(i => allTriangles[i]);
+    const estimated = baseTris.length * Math.pow(4, subdivLevel);
+    showLoading(`Subdividing… (~${estimated.toLocaleString()} triangles)`);
+    document.getElementById('exportBtn').disabled = true;
+    await tick();
+
+    try {
+      const smoothed = subdivide(baseTris, subdivLevel);
+      buf = writeBinarySTLDirect(smoothed);
+      triCount = smoothed.length;
+      suffix = `_figure_smooth.stl`;
+    } catch (e) {
+      hideLoading();
+      document.getElementById('exportBtn').disabled = false;
+      setStatus('Subdivision failed: ' + e.message);
+      return;
+    }
+
+    hideLoading();
+    document.getElementById('exportBtn').disabled = false;
+  } else {
+    buf = writeBinarySTL(keptIndices, allTriangles);
+    triCount = keptIndices.length;
+    suffix = `_figure.stl`;
+  }
+
+  const blob = new Blob([buf], { type: 'model/stl' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${base}${suffix}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  const lvlNote = subdivLevel > 0 ? `, subdivision L${subdivLevel}` : '';
+  setStatus(`Saved: ${base}${suffix}  (${triCount.toLocaleString()} triangles${lvlNote})`);
+});
+
+// ─── Subdivision UI ───────────────────────────────────────────────────────────
+
+document.getElementById('subdivEnabled').addEventListener('change', function () {
+  document.getElementById('subdivControls').style.display = this.checked ? '' : 'none';
+  if (this.checked) updateSubdivEstimate();
+});
+
+document.querySelectorAll('input[name="subdivLevel"]').forEach(r =>
+  r.addEventListener('change', updateSubdivEstimate)
+);
+
+function updateSubdivEstimate() {
+  const level = parseInt(document.querySelector('input[name="subdivLevel"]:checked').value);
+  const baseTris = shells.reduce((sum, s, i) => keep[i] ? sum + s.length : sum, 0);
+  const outTris = baseTris * Math.pow(4, level);
+  const sizeMB = (outTris * 50 / 1024 / 1024).toFixed(1);
+  const el = document.getElementById('subdivEstimate');
+  el.textContent = `~${outTris.toLocaleString()} triangles · ~${sizeMB} MB file`;
+  el.className = 'subdiv-estimate' + (outTris > 2_000_000 ? ' warn' : '');
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  for (const m of meshes) { m.geometry.dispose(); m.material.dispose(); scene.remove(m); }
+  meshes = []; shells = []; shellInfo = []; keep = []; allTriangles = []; figureShellIndices = [];
+  document.getElementById('componentsSection').style.display = 'none';
+  document.getElementById('singleMeshWarning').style.display = 'none';
+  document.getElementById('subdivSection').style.display = 'none';
+  document.getElementById('subdivEnabled').checked = false;
+  document.getElementById('subdivControls').style.display = 'none';
+  document.getElementById('exportBtn').disabled = true;
+  document.getElementById('resetBtn').style.display = 'none';
+  document.getElementById('overlay').style.display = '';
+  document.getElementById('fileInput').value = '';
+  setStatus('Ready — drag an STL file onto the window');
+});
+
+// ─── File Drop ────────────────────────────────────────────────────────────────
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+document.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) dropZone.classList.remove('dragover'); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.toLowerCase().endsWith('.stl')) {
+    processFile(f);
+  } else if (f) {
+    setStatus('Please drop an STL file (.stl)');
+  }
+});
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
+function setLoadingMsg(msg) { document.getElementById('loadingMsg').textContent = msg; }
+function showLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingOverlay').style.display = '';
+}
+function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+</script>
+</body>
+</html>
