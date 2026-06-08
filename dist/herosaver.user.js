@@ -17,7 +17,7 @@
 
   const SRC = 'https://raw.githubusercontent.com/mungeondaster/Herosaver/master/dist/herosaver.js'
 
-  // ← URL where Hero Cleaner is hosted (GitHub Pages)
+  // Change this to match wherever you host stl-cube-remover.html
   const HERO_CLEANER_URL = 'https://mungeondaster.github.io/Herosaver/stl-cube-remover.html'
 
   // Inject into the page context so the loaded code can reach window.CK, THREE, etc.
@@ -32,60 +32,95 @@
   GM_registerMenuCommand('Herosaver: Save OBJ', () => run('saveObj'))
   GM_registerMenuCommand('Herosaver: Save JSON', () => run('saveJson'))
 
-  // ─── Hero Cleaner integration ────────────────────────────────────────────────
-  // Intercepts the STL download blob and pushes it directly to Hero Cleaner
-  // instead of saving to disk — eliminating the manual drag-and-drop step.
-  GM_registerMenuCommand('Herosaver: Send to Hero Cleaner ✦', () => {
+  // ─── Hero Cleaner integration ─────────────────────────────────────────────
+  // Intercepts the STL blob before FileSaver writes it to disk and pushes it
+  // directly into Hero Cleaner via postMessage.
+  //
+  // Three overlapping intercept points are used because different versions /
+  // build configurations of FileSaver.js take different code paths:
+  //   1. document.createElement patch   - catches a.click() on new elements
+  //   2. HTMLElement.prototype.click    - catches a.click() on any element
+  //   3. EventTarget.prototype.dispatchEvent - catches dispatchEvent('click')
+  // The first one to fire wins; the others are restored immediately.
+  GM_registerMenuCommand('Herosaver: Send to Hero Cleaner', () => {
     const heroUrl = HERO_CLEANER_URL
     const src = SRC
     const s = document.createElement('script')
     s.textContent = `
 (function () {
-  // Temporarily patch document.createElement so we can intercept
-  // the <a download> element that FileSaver.js creates for the STL blob.
+  var intercepted = false
+
+  function sendToHeroCleaner(buffer, filename) {
+    var heroWindow = window.open('${heroUrl}', '_blank')
+    var data = Array.from(new Uint8Array(buffer))
+    var done = false, attempts = 0
+    var iv = setInterval(function () {
+      attempts++
+      if (done || heroWindow.closed || attempts > 100) { clearInterval(iv); return }
+      try { heroWindow.postMessage({ type: 'herosaver-stl', data: data, filename: filename }, '*') }
+      catch (e) {}
+    }, 300)
+    window.addEventListener('message', function ack(e) {
+      if (e.source === heroWindow && e.data && e.data.type === 'herosaver-ack') {
+        done = true; clearInterval(iv); window.removeEventListener('message', ack)
+      }
+    })
+  }
+
+  function intercept(href, filename) {
+    if (intercepted) return
+    intercepted = true
+    restore()
+    fetch(href).then(function (r) { return r.arrayBuffer() }).then(function (buf) {
+      URL.revokeObjectURL(href)
+      sendToHeroCleaner(buf, filename || 'heroforge_model.stl')
+    })
+  }
+
+  function restore() {
+    document.createElement = _origCE
+    HTMLElement.prototype.click = _origProtoClick
+    EventTarget.prototype.dispatchEvent = _origDE
+  }
+
+  // Method 1: patch document.createElement
   var _origCE = document.createElement.bind(document)
   document.createElement = function (tag) {
     var el = _origCE(tag)
     if (tag.toLowerCase() === 'a') {
-      var _origClick = el.click.bind(el)
-      el.click = function () {
-        document.createElement = _origCE          // restore immediately
-        var href = el.href
-        var filename = el.download || 'heroforge_model.stl'
-        if (href && href.startsWith('blob:')) {
-          // Read the blob before it gets revoked, then send to Hero Cleaner
-          fetch(href)
-            .then(function (r) { return r.arrayBuffer() })
-            .then(function (buffer) {
-              URL.revokeObjectURL(href)
-              var heroWindow = window.open('${heroUrl}', '_blank')
-              var data = Array.from(new Uint8Array(buffer))
-              var done = false
-              var attempts = 0
-              // Retry every 300ms until Hero Cleaner ACKs (handles slow tab open)
-              var iv = setInterval(function () {
-                attempts++
-                if (done || heroWindow.closed || attempts > 100) { clearInterval(iv); return }
-                try { heroWindow.postMessage({ type: 'herosaver-stl', data: data, filename: filename }, '*') }
-                catch (e) {}
-              }, 300)
-              window.addEventListener('message', function ack(e) {
-                if (e.source === heroWindow && e.data && e.data.type === 'herosaver-ack') {
-                  done = true
-                  clearInterval(iv)
-                  window.removeEventListener('message', ack)
-                }
-              })
-            })
-        } else {
-          _origClick()   // not a blob — fall through to normal behaviour
+      Object.defineProperty(el, 'click', {
+        configurable: true, writable: true,
+        value: function () {
+          if (el.download && el.href && el.href.startsWith('blob:')) {
+            intercept(el.href, el.download)
+          } else { _origProtoClick.call(el) }
         }
-      }
+      })
     }
     return el
   }
 
-  // Load herosaver.js and call saveStl — our patched createElement catches the result
+  // Method 2: patch HTMLElement.prototype.click
+  var _origProtoClick = HTMLElement.prototype.click
+  HTMLElement.prototype.click = function () {
+    if (!intercepted && this.tagName === 'A' &&
+        this.download && this.href && this.href.startsWith('blob:')) {
+      intercept(this.href, this.download)
+    } else { _origProtoClick.call(this) }
+  }
+
+  // Method 3: patch EventTarget.prototype.dispatchEvent
+  var _origDE = EventTarget.prototype.dispatchEvent
+  EventTarget.prototype.dispatchEvent = function (event) {
+    if (!intercepted && event.type === 'click' &&
+        this.tagName === 'A' && this.download &&
+        this.href && this.href.startsWith('blob:')) {
+      intercept(this.href, this.download)
+      return true
+    }
+    return _origDE.call(this, event)
+  }
+
   fetch('${src}')
     .then(function (r) { return r.text() })
     .then(eval)
