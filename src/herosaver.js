@@ -90,6 +90,37 @@ window.saveStl = subdivisions => {
   saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${getName()}.stl`)
 }
 
+// Debug: list every mesh in the character so the cube/shell can be identified
+// by name. Run heroMeshes() in DevTools and look for an axis-aligned box whose
+// size encloses the whole figure - that is the cube.
+window.heroMeshes = () => {
+  const rows = []
+  character.updateMatrixWorld(true)
+  character.traverse(mesh => {
+    const geo = mesh.geometry
+    if (!geo || !(geo.attributes && geo.attributes.position)) return
+    const pos = geo.getAttribute('position')
+    let minX = Infinity; let minY = Infinity; let minZ = Infinity
+    let maxX = -Infinity; let maxY = -Infinity; let maxZ = -Infinity
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i); const y = pos.getY(i); const z = pos.getZ(i)
+      if (x < minX) minX = x; if (x > maxX) maxX = x
+      if (y < minY) minY = y; if (y > maxY) maxY = y
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+    }
+    rows.push({
+      name: mesh.name || '(unnamed)',
+      type: mesh.type,
+      visible: mesh.visible,
+      skinned: !!(mesh.isSkinnedMesh || (mesh.skeleton && mesh.skeleton.bones && mesh.skeleton.bones.length)),
+      verts: pos.count,
+      size: [maxX - minX, maxY - minY, maxZ - minZ].map(s => +s.toFixed(3)).join(' x ')
+    })
+  })
+  console.table(rows)
+  return rows
+}
+
 // export character as STL file with the surrounding cube/shell removed.
 // Same pipeline as saveStl, then the auto cube-detection from Hero Cleaner is
 // applied to the exported buffer before saving (no external page required).

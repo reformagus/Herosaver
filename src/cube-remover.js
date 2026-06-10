@@ -172,7 +172,11 @@ function writeBinarySTL (keptIndices, triangles) {
 // Takes a binary STL ArrayBuffer, removes the auto-detected cube shell, and
 // returns a new binary STL ArrayBuffer with only the kept shells.
 // If no convincing cube is found the original triangles are re-emitted unchanged.
-export const removeCubeFromSTL = (buffer) => {
+//
+// cubeThreshold lets callers loosen/tighten the auto-detection (default 0.65,
+// matching the standalone tool). Diagnostics are logged to the console so the
+// detection can be inspected on a real model.
+export const removeCubeFromSTL = (buffer, cubeThreshold = 0.65) => {
   const triangles = parseSTL(buffer)
   if (triangles.length === 0) return buffer
 
@@ -195,11 +199,30 @@ export const removeCubeFromSTL = (buffer) => {
     }
   })
 
-  // Only remove if the shell is convincingly cube-like (>0.65).
+  // Only remove if the shell is convincingly cube-like.
   const keep = shellInfo.map(() => true)
-  if (bestCubeIdx >= 0 && bestCubeScore > 0.65) {
+  if (bestCubeIdx >= 0 && bestCubeScore > cubeThreshold) {
     keep[bestCubeIdx] = false
   }
+
+  // Diagnostics: log every shell so detection can be inspected on real models.
+  try {
+    console.log(`[Herosaver clean] ${shells.length} shell(s), ${totalFaces} faces, threshold ${cubeThreshold}`)
+    console.table(shellInfo.map((info, i) => ({
+      shell: i,
+      faces: info.count,
+      cubeScore: +info.cubeScore.toFixed(3),
+      axisScore: +info.axisScore.toFixed(3),
+      aspectScore: +info.aspectScore.toFixed(3),
+      size: info.size.map(s => +s.toFixed(2)).join(' x '),
+      removed: !keep[i]
+    })))
+    if (bestCubeIdx < 0 || bestCubeScore <= cubeThreshold) {
+      console.warn(`[Herosaver clean] No shell exceeded the cube threshold (best ${bestCubeScore.toFixed(3)}). Nothing removed. The cube may be merged with the figure, or the threshold may need lowering.`)
+    } else {
+      console.log(`[Herosaver clean] Removed shell ${bestCubeIdx} (cubeScore ${bestCubeScore.toFixed(3)}).`)
+    }
+  } catch (e) { /* console.table unavailable */ }
 
   const keptIndices = []
   shells.forEach((shell, i) => {
