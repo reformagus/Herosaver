@@ -169,58 +169,66 @@ function writeBinarySTL (keptIndices, triangles) {
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
-// Takes a binary STL ArrayBuffer, removes the auto-detected cube shell, and
+// Takes a binary STL ArrayBuffer, removes the HeroForge wrapping cube, and
 // returns a new binary STL ArrayBuffer with only the kept shells.
-// If no convincing cube is found the original triangles are re-emitted unchanged.
+// If no wrapping cube is found the original triangles are re-emitted unchanged.
 //
-// cubeThreshold lets callers loosen/tighten the auto-detection (default 0.65,
-// matching the standalone tool). Diagnostics are logged to the console so the
-// detection can be inspected on a real model.
-export const removeCubeFromSTL = (buffer, cubeThreshold = 0.65) => {
+// gapRatio is the multiplicative jump in bounding-box volume that flags the
+// cube (default 1000). Diagnostics are logged to the console so the detection
+// can be inspected on a real model.
+export const removeCubeFromSTL = (buffer, gapRatio = 1000) => {
   const triangles = parseSTL(buffer)
   if (triangles.length === 0) return buffer
 
-  let shells = findConnectedComponents(triangles)
-  let shellInfo = shells.map(s => analyzeShell(s, triangles))
+  const shells = findConnectedComponents(triangles)
+  const shellInfo = shells.map(s => analyzeShell(s, triangles))
 
-  // Sort shells by volume descending (largest first) - matches the tool's ordering.
-  const order = shellInfo.map((_, i) => i).sort((a, b) => shellInfo[b].volume - shellInfo[a].volume)
-  shells = order.map(i => shells[i])
-  shellInfo = order.map(i => shellInfo[i])
-
-  // Auto-detect cube: highest cubeScore among shells with at least 0.5% of faces.
   const totalFaces = triangles.length
-  let bestCubeIdx = -1
-  let bestCubeScore = 0
-  shellInfo.forEach((info, i) => {
-    if (info.count / totalFaces >= 0.005 && info.cubeScore > bestCubeScore) {
-      bestCubeScore = info.cubeScore
-      bestCubeIdx = i
-    }
-  })
-
-  // Only remove if the shell is convincingly cube-like.
   const keep = shellInfo.map(() => true)
-  if (bestCubeIdx >= 0 && bestCubeScore > cubeThreshold) {
-    keep[bestCubeIdx] = false
+
+  // HeroForge encases the figure in a giant enclosing box (the "cube"/cage).
+  // It survives export as a connected shell whose bounding-box volume dwarfs
+  // every real body shell by many orders of magnitude (observed ~1e14 vs ~1e3).
+  // "Cube-likeness" scoring is unreliable here - after the 90deg rotation and
+  // skin baking the box is skewed, so its axis-aligned score drops. Instead we
+  // detect the cube by that huge volume gap: sort shells by bounding-box volume,
+  // find the largest multiplicative jump, and drop everything above it when the
+  // jump is enormous (handles a cube that exports as more than one shell too).
+  const ascByVol = shellInfo
+    .map((info, i) => ({ i, volume: info.volume }))
+    .filter(s => s.volume > 0)
+    .sort((a, b) => a.volume - b.volume)
+
+  let splitPos = -1
+  let maxRatio = 1
+  for (let k = 0; k < ascByVol.length - 1; k++) {
+    const ratio = ascByVol[k + 1].volume / ascByVol[k].volume
+    if (ratio > maxRatio) { maxRatio = ratio; splitPos = k }
+  }
+
+  const removedIdx = []
+  if (splitPos >= 0 && maxRatio > gapRatio) {
+    for (let k = splitPos + 1; k < ascByVol.length; k++) {
+      keep[ascByVol[k].i] = false
+      removedIdx.push(ascByVol[k].i)
+    }
   }
 
   // Diagnostics: log every shell so detection can be inspected on real models.
   try {
-    console.log(`[Herosaver clean] ${shells.length} shell(s), ${totalFaces} faces, threshold ${cubeThreshold}`)
+    console.log(`[Herosaver clean] ${shells.length} shell(s), ${totalFaces} faces, largest volume gap ${maxRatio.toExponential(1)}x (threshold ${gapRatio}x)`)
     console.table(shellInfo.map((info, i) => ({
       shell: i,
       faces: info.count,
+      volume: +info.volume.toPrecision(3),
       cubeScore: +info.cubeScore.toFixed(3),
-      axisScore: +info.axisScore.toFixed(3),
-      aspectScore: +info.aspectScore.toFixed(3),
       size: info.size.map(s => +s.toFixed(2)).join(' x '),
       removed: !keep[i]
     })))
-    if (bestCubeIdx < 0 || bestCubeScore <= cubeThreshold) {
-      console.warn(`[Herosaver clean] No shell exceeded the cube threshold (best ${bestCubeScore.toFixed(3)}). Nothing removed. The cube may be merged with the figure, or the threshold may need lowering.`)
+    if (removedIdx.length) {
+      console.log(`[Herosaver clean] Removed ${removedIdx.length} oversized shell(s) [${removedIdx.join(', ')}] as the wrapping cube.`)
     } else {
-      console.log(`[Herosaver clean] Removed shell ${bestCubeIdx} (cubeScore ${bestCubeScore.toFixed(3)}).`)
+      console.warn('[Herosaver clean] No oversized enclosing shell found - nothing removed. The cube may be merged with the figure.')
     }
   } catch (e) { /* console.table unavailable */ }
 
