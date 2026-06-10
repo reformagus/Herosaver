@@ -17,7 +17,7 @@ With Tampermonkey installed, click the link below. Tampermonkey will detect the 
 
 **[➜ Install Herosaver userscript](https://raw.githubusercontent.com/reformagus/Herosaver/master/dist/herosaver.user.js)**
 
-By default it runs on every site (`@match *://*/*`). After installing, you can edit the `@match` line in the Tampermonkey dashboard to restrict it to the site(s) you use.
+It is restricted to HeroForge (`@match *://*.heroforge.com/*`). After installing, you can edit the `@match` line in the Tampermonkey dashboard if you need to use it on another site.
 
 ### Manual install
 
@@ -25,7 +25,7 @@ Alternatively, open the Tampermonkey dashboard, click **Create a new script**, a
 
 ### Usage
 
-Go to the target page, open the Tampermonkey menu in the toolbar, and click **Herosaver: Save STL** or **Herosaver: Save OBJ**.
+Go to the target page and use either the on-page Herosaver panel (bottom-right) or the Tampermonkey menu in the toolbar, then click **Save STL**, **Save Clean STL**, **Save OBJ** or **Save JSON**.
 
-Download the "stl-cube-remover.html" in the repository and run it locally to remove cube shell and apply smoothing to your model's mesh.  
-*Note* - removing the cube shell on this web app will not reveal the model within for the preview.  Model will be visible in the re-exported STL. 
+**Save Clean STL** exports the model with the surrounding cube/shell automatically removed. The cube removal runs locally on the exported STL, so no external page is required.  
+*Note* - the cube shell is only stripped from the re-exported STL; it is not removed from the live web app preview.

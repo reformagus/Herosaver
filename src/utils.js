@@ -49,7 +49,7 @@ const bakeSkinnedVertex = (() => {
   // Decode HeroForge's sawtooth-encoded blend weight: abs(mod(v + 1.0, 2.0) - 1.0)
   const decodeWeight = (v) => {
     let m = (v + 1.0) % 2.0
-    if (m < 0) m += 2.0   // ensure non-negative (matches GLSL mod behaviour)
+    if (m < 0) m += 2.0 // ensure non-negative (matches GLSL mod behaviour)
     return Math.abs(m - 1.0)
   }
 
@@ -127,7 +127,12 @@ export const process = (object3d, smooth, mirroredPose) => {
   const msca = new Matrix4().makeScale(10, 10, 10)
   const mTransform = new Matrix4().multiplyMatrices(msca, mrot)
 
-  object3d.traverseVisible(mesh => {
+  // Make sure every node's world matrix is current before we read matrixWorld below.
+  object3d.updateMatrixWorld(true)
+
+  // traverse (not traverseVisible): HeroForge keeps some exported meshes flagged
+  // invisible, so traverseVisible would silently drop parts of the model.
+  object3d.traverse(mesh => {
     // Older Three.js (used by HeroForge) may not set isMesh/isSkinnedMesh flags —
     // fall back to checking the constructor name and skeleton presence.
     const isMesh = mesh.isMesh || (mesh.geometry && mesh.geometry.isBufferGeometry)
@@ -150,8 +155,9 @@ export const process = (object3d, smooth, mirroredPose) => {
       let vertex
 
       if (isSkinned) {
-        // Manually bake bone transforms (compatible with older Three.js without boneTransform())
-        vertex = bakeSkinnedVertex(mesh, i)
+        // Manually bake bone transforms (compatible with older Three.js without boneTransform()),
+        // then apply the mesh's own world matrix to place the baked vertex in scene space.
+        vertex = bakeSkinnedVertex(mesh, i).applyMatrix4(mesh.matrixWorld)
       } else {
         // Static mesh: just apply its world transform
         vertex = new Vector3(vertices.getX(i), vertices.getY(i), vertices.getZ(i))

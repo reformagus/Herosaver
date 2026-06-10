@@ -2,9 +2,9 @@
 
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js'
-import { Matrix4, Vector3 } from 'three'
 import { saveAs } from 'file-saver'
 import { character, getName, process } from './utils'
+import { removeCubeFromSTL } from './cube-remover'
 
 // export full scene as JSON (for debugging)
 window.saveJson = () => saveAs(new Blob([JSON.stringify(window.CK.data.getJson())], { type: 'application/json;charset=utf-8' }), `${getName()}.json`)
@@ -25,19 +25,19 @@ window.debugSkin = () => {
 
   // mat4 * vec3 (w=1), Three.js column-major
   const mulMV = (m, x, y, z) => [
-    m[0]*x + m[4]*y + m[8]*z  + m[12],
-    m[1]*x + m[5]*y + m[9]*z  + m[13],
-    m[2]*x + m[6]*y + m[10]*z + m[14]
+    m[0] * x + m[4] * y + m[8] * z + m[12],
+    m[1] * x + m[5] * y + m[9] * z + m[13],
+    m[2] * x + m[6] * y + m[10] * z + m[14]
   ]
   const mulMM = (a, b) => {
     const r = new Array(16).fill(0)
-    for (let c=0; c<4; c++) for (let row=0; row<4; row++) for (let k=0; k<4; k++) r[c*4+row]+=a[k*4+row]*b[c*4+k]
+    for (let c = 0; c < 4; c++) for (let row = 0; row < 4; row++) for (let k = 0; k < 4; k++) r[c * 4 + row] += a[k * 4 + row] * b[c * 4 + k]
     return r
   }
 
   // Verify vertex 0
   const posAttr = geo.getAttribute('position')
-  let vx = posAttr.getX(0), vy = posAttr.getY(0), vz = posAttr.getZ(0)
+  let vx = posAttr.getX(0); let vy = posAttr.getY(0); let vz = posAttr.getZ(0)
 
   // Apply morph targets (matches shader)
   const infl = mesh.morphTargetInfluences || []
@@ -55,7 +55,7 @@ window.debugSkin = () => {
 
   // Weighted skinning over skin0, skin1, skin2
   const bmi = mesh.bindMatrixInverse.elements
-  let sx=0, sy=0, sz=0, skinSum=0
+  let sx = 0; let sy = 0; let sz = 0; let skinSum = 0
   const active = (geo.skinNames || ['skin0']).slice(0, 3)
   active.forEach(sname => {
     const attr = geo.getAttribute(sname)
@@ -63,19 +63,19 @@ window.debugSkin = () => {
     const pairs = attr.itemSize / 2
     const base = 0 * attr.itemSize
     for (let p = 0; p < pairs; p++) {
-      const bi = Math.round(attr.array[base + p*2])
-      const w  = decodeWeight(attr.array[base + p*2 + 1])
+      const bi = Math.round(attr.array[base + p * 2])
+      const w = decodeWeight(attr.array[base + p * 2 + 1])
       if (!w) continue
       const bone = skel.bones[bi]
-      const inv  = skel.boneInverses[bi]
+      const inv = skel.boneInverses[bi]
       if (!bone || !inv) continue
       const mat = mulMM(bone.matrixWorld.elements, inv.elements)
       const [cx, cy, cz] = mulMV(mat, vx, vy, vz)
       console.log(`  bone[${bi}] "${bone.name}" w=${w.toFixed(4)} → [${cx.toFixed(4)}, ${cy.toFixed(4)}, ${cz.toFixed(4)}]`)
-      sx += cx*w; sy += cy*w; sz += cz*w; skinSum += w
+      sx += cx * w; sy += cy * w; sz += cz * w; skinSum += w
     }
   })
-  if (skinSum > 0) { sx/=skinSum; sy/=skinSum; sz/=skinSum }
+  if (skinSum > 0) { sx /= skinSum; sy /= skinSum; sz /= skinSum }
   const [rx, ry, rz] = mulMV(bmi, sx, sy, sz)
   console.log('skinSum:', skinSum.toFixed(6))
   console.log('final baked vertex[0] (world):', [rx, ry, rz].map(v => v.toFixed(4)))
@@ -88,6 +88,21 @@ window.saveStl = subdivisions => {
   const exporter = new STLExporter()
   const buffer = exporter.parse(group, { binary: true })
   saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${getName()}.stl`)
+}
+
+// export character as STL file with the surrounding cube/shell removed.
+// Same pipeline as saveStl, then the auto cube-detection from Hero Cleaner is
+// applied to the exported buffer before saving (no external page required).
+window.saveCleanStl = subdivisions => {
+  const group = process(character, subdivisions, !!character.data.mirroredPose)
+  const exporter = new STLExporter()
+  // STLExporter binary mode returns a DataView; normalize to a plain ArrayBuffer.
+  const view = exporter.parse(group, { binary: true })
+  const arrayBuffer = view.buffer
+    ? view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength)
+    : view
+  const cleaned = removeCubeFromSTL(arrayBuffer)
+  saveAs(new Blob([cleaned], { type: 'application/octet-stream' }), `${getName()}_clean.stl`)
 }
 
 // export character as OBJ file
