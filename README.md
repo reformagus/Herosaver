@@ -15,7 +15,7 @@ Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Firefox, Edge, Sa
 
 With Tampermonkey installed, click the link below. Tampermonkey will detect the `.user.js` file and open its install screen automatically:
 
-**[➜ Install Herosaver userscript](https://raw.githubusercontent.com/mungeondaster/Herosaver/master/dist/herosaver.user.js)**
+**[➜ Install Herosaver userscript](https://raw.githubusercontent.com/reformagus/Herosaver/master/dist/herosaver.user.js)**
 
 By default it runs on every site (`@match *://*/*`). After installing, you can edit the `@match` line in the Tampermonkey dashboard to restrict it to the site(s) you use.
 
