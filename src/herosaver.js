@@ -1,10 +1,10 @@
 /* global Blob */
 
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
-import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js'
 import { saveAs } from 'file-saver'
 import { character, getName, process } from './utils'
 import { removeCubeFromSTL } from './cube-remover'
+import { exportOBJ } from './obj-exporter'
 
 // export full scene as JSON (for debugging)
 window.saveJson = () => saveAs(new Blob([JSON.stringify(window.CK.data.getJson())], { type: 'application/json;charset=utf-8' }), `${getName()}.json`)
@@ -139,6 +139,5 @@ window.saveCleanStl = subdivisions => {
 // export character as OBJ file
 window.saveObj = subdivisions => {
   const group = process(character, subdivisions, !!character.data.mirroredPose)
-  const exporter = new OBJExporter()
-  saveAs(new Blob([exporter.parse(group)], { type: 'application/octet-stream;charset=utf-8' }), `${getName()}.obj`)
+  saveAs(new Blob([exportOBJ(group)], { type: 'application/octet-stream;charset=utf-8' }), `${getName()}.obj`)
 }

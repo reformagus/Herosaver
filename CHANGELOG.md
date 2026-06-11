@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.1]
+
+### Fixed
+- "Save OBJ" produced an empty (0 KB) file. three's `OBJExporter` detects
+  meshes with `instanceof Mesh`, which fails when more than one copy of three
+  is in scope, so nothing was written. Replaced it with a small self-contained
+  OBJ writer (`src/obj-exporter.js`) that detects meshes via the `isMesh` flag,
+  matching the robust approach `STLExporter` already uses. Output verified to
+  match three's `OBJExporter` for indexed and non-indexed geometry.
+- The panel buttons and menu commands now cache-bust the bundle fetch, so they
+  always run the latest published bundle instead of a stale cached one.
+
 ## [1.3.0]
 
 ### Changed

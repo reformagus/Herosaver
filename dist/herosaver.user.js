@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Herosaver
 // @namespace    https://github.com/reformagus/Herosaver
-// @version      1.3.0
+// @version      1.3.1
 // @description  Save Configuration and STLs from websites using the THREE.JS framework
 // @author       reformagus
 // @homepageURL  https://github.com/reformagus/Herosaver
@@ -18,9 +18,11 @@
   const SRC = 'https://raw.githubusercontent.com/reformagus/Herosaver/master/dist/herosaver.js'
 
   // Inject into the page context so the loaded code can reach window.CK, THREE, etc.
+  // A cache-busting query is appended so the freshest published bundle always
+  // runs (GitHub raw and the browser otherwise cache the bundle for minutes).
   const run = (fn) => {
     const s = document.createElement('script')
-    s.textContent = `fetch('${SRC}').then(r => r.text()).then(eval).then(() => ${fn}())`
+    s.textContent = `fetch('${SRC}?_=' + Date.now()).then(r => r.text()).then(eval).then(() => ${fn}())`
     document.body.appendChild(s)
     s.remove()
   }
