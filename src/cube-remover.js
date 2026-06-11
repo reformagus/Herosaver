@@ -13,7 +13,7 @@
 
 // ─── STL Parser ─────────────────────────────────────────────────────────────
 
-function parseSTL (buffer) {
+export function parseSTL (buffer) {
   const dv = new DataView(buffer)
   if (buffer.byteLength < 84) throw new Error('Buffer too small to be a valid STL.')
 
@@ -149,15 +149,14 @@ function analyzeShell (indices, triangles) {
 
 // ─── STL Writer ─────────────────────────────────────────────────────────────
 
-function writeBinarySTL (keptIndices, triangles) {
-  const n = keptIndices.length
+function writeBinarySTL (tris) {
+  const n = tris.length
   const buf = new ArrayBuffer(84 + n * 50)
   const dv = new DataView(buf)
   new Uint8Array(buf).set(new TextEncoder().encode('Herosaver clean STL export'), 0)
   dv.setUint32(80, n, true)
   let o = 84
-  for (const i of keptIndices) {
-    const { normal: [nx, ny, nz], vertices } = triangles[i]
+  for (const { normal: [nx, ny, nz], vertices } of tris) {
     dv.setFloat32(o, nx, true); dv.setFloat32(o + 4, ny, true); dv.setFloat32(o + 8, nz, true); o += 12
     for (const [x, y, z] of vertices) {
       dv.setFloat32(o, x, true); dv.setFloat32(o + 4, y, true); dv.setFloat32(o + 8, z, true); o += 12
@@ -169,16 +168,16 @@ function writeBinarySTL (keptIndices, triangles) {
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
-// Takes a binary STL ArrayBuffer, removes the HeroForge wrapping cube, and
-// returns a new binary STL ArrayBuffer with only the kept shells.
-// If no wrapping cube is found the original triangles are re-emitted unchanged.
+// Takes a triangle list (as produced by parseSTL), detects the HeroForge
+// wrapping cube and returns only the kept triangles. If no wrapping cube is
+// found the triangles are returned unchanged. Shared by the STL and OBJ exports
+// so both strip the same cube.
 //
 // gapRatio is the multiplicative jump in bounding-box volume that flags the
 // cube (default 1000). Diagnostics are logged to the console so the detection
 // can be inspected on a real model.
-export const removeCubeFromSTL = (buffer, gapRatio = 1000) => {
-  const triangles = parseSTL(buffer)
-  if (triangles.length === 0) return buffer
+export const removeCubeTriangles = (triangles, gapRatio = 1000) => {
+  if (triangles.length === 0) return triangles
 
   const shells = findConnectedComponents(triangles)
   const shellInfo = shells.map(s => analyzeShell(s, triangles))
@@ -232,10 +231,17 @@ export const removeCubeFromSTL = (buffer, gapRatio = 1000) => {
     }
   } catch (e) { /* console.table unavailable */ }
 
-  const keptIndices = []
+  const kept = []
   shells.forEach((shell, i) => {
-    if (keep[i]) keptIndices.push(...shell)
+    if (keep[i]) for (const t of shell) kept.push(triangles[t])
   })
+  return kept
+}
 
-  return writeBinarySTL(keptIndices, triangles)
+// Takes a binary STL ArrayBuffer, removes the HeroForge wrapping cube, and
+// returns a new binary STL ArrayBuffer with only the kept shells.
+export const removeCubeFromSTL = (buffer, gapRatio = 1000) => {
+  const triangles = parseSTL(buffer)
+  if (triangles.length === 0) return buffer
+  return writeBinarySTL(removeCubeTriangles(triangles, gapRatio))
 }

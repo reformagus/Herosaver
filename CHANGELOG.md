@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.2]
+
+### Changed
+- "Save OBJ" now removes the wrapping cube too, just like "Save STL". The cube
+  detection was refactored to operate on a shared triangle list
+  (`removeCubeTriangles`), and the OBJ export routes through the same exported
+  STL triangles, so STL and OBJ strip the exact same cube.
+
 ## [1.3.1]
 
 ### Fixed

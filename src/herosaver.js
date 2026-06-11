@@ -3,8 +3,19 @@
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
 import { saveAs } from 'file-saver'
 import { character, getName, process } from './utils'
-import { removeCubeFromSTL } from './cube-remover'
-import { exportOBJ } from './obj-exporter'
+import { parseSTL, removeCubeTriangles, removeCubeFromSTL } from './cube-remover'
+import { exportOBJFromTriangles } from './obj-exporter'
+
+// Export the character to a binary STL ArrayBuffer (the common starting point
+// for the STL/OBJ exports and the cube removal that both share).
+const exportSTLBuffer = subdivisions => {
+  const group = process(character, subdivisions, !!character.data.mirroredPose)
+  const view = new STLExporter().parse(group, { binary: true })
+  // STLExporter binary mode returns a DataView; normalize to a plain ArrayBuffer.
+  return view.buffer
+    ? view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength)
+    : view
+}
 
 // export full scene as JSON (for debugging)
 window.saveJson = () => saveAs(new Blob([JSON.stringify(window.CK.data.getJson())], { type: 'application/json;charset=utf-8' }), `${getName()}.json`)
@@ -82,12 +93,10 @@ window.debugSkin = () => {
   console.log('Expected: right toe area, roughly [-0.41..0.06..0.75] or post-transform')
 }
 
-// export character as STL file (binary to avoid JS string length limits on large models)
+// export character as STL file, cube included (binary to avoid JS string length
+// limits on large models). Kept for callers that want the raw, uncleaned export.
 window.saveStl = subdivisions => {
-  const group = process(character, subdivisions, !!character.data.mirroredPose)
-  const exporter = new STLExporter()
-  const buffer = exporter.parse(group, { binary: true })
-  saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${getName()}.stl`)
+  saveAs(new Blob([exportSTLBuffer(subdivisions)], { type: 'application/octet-stream' }), `${getName()}.stl`)
 }
 
 // Debug: list every mesh in the character so the cube/shell can be identified
@@ -122,22 +131,15 @@ window.heroMeshes = () => {
 }
 
 // export character as STL file with the surrounding cube/shell removed.
-// Same pipeline as saveStl, then the auto cube-detection from Hero Cleaner is
-// applied to the exported buffer before saving (no external page required).
+// Same pipeline as saveStl, then the cube is stripped from the exported buffer.
 window.saveCleanStl = subdivisions => {
-  const group = process(character, subdivisions, !!character.data.mirroredPose)
-  const exporter = new STLExporter()
-  // STLExporter binary mode returns a DataView; normalize to a plain ArrayBuffer.
-  const view = exporter.parse(group, { binary: true })
-  const arrayBuffer = view.buffer
-    ? view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength)
-    : view
-  const cleaned = removeCubeFromSTL(arrayBuffer)
+  const cleaned = removeCubeFromSTL(exportSTLBuffer(subdivisions))
   saveAs(new Blob([cleaned], { type: 'application/octet-stream' }), `${getName()}_clean.stl`)
 }
 
-// export character as OBJ file
+// export character as OBJ file with the surrounding cube/shell removed.
+// Routes through the STL triangles so it strips the exact same cube as the STL.
 window.saveObj = subdivisions => {
-  const group = process(character, subdivisions, !!character.data.mirroredPose)
-  saveAs(new Blob([exportOBJ(group)], { type: 'application/octet-stream;charset=utf-8' }), `${getName()}.obj`)
+  const triangles = removeCubeTriangles(parseSTL(exportSTLBuffer(subdivisions)))
+  saveAs(new Blob([exportOBJFromTriangles(triangles)], { type: 'application/octet-stream;charset=utf-8' }), `${getName()}.obj`)
 }

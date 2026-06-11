@@ -1,49 +1,24 @@
-import { Vector3 } from 'three'
+// Minimal OBJ writer working on a triangle list (as produced by parseSTL in
+// cube-remover.js). The character is exported to a binary STL first, the
+// wrapping cube is stripped from those triangles, and the kept triangles are
+// written out here - so the OBJ strips the exact same cube the STL does.
+//
+// Triangles are a flat soup (3 unique vertices each), matching how STL exports,
+// rather than relying on three's OBJExporter (whose `instanceof Mesh` check
+// breaks when more than one copy of three is in scope, giving empty exports).
+export const exportOBJFromTriangles = (triangles) => {
+  let output = 'o herosaver\n'
 
-// Minimal OBJ writer. Equivalent to three's OBJExporter for our meshes, but it
-// detects meshes via the `isMesh` flag (like STLExporter) instead of
-// `instanceof Mesh`. The instanceof check breaks when more than one copy of
-// three ends up in scope, which produced empty (0 KB) OBJ exports.
-export const exportOBJ = (object) => {
-  let output = ''
-  let indexVertex = 0
-  const vertex = new Vector3()
-
-  object.updateMatrixWorld(true)
-
-  object.traverse(mesh => {
-    if (!mesh.isMesh) return
-    const geometry = mesh.geometry
-    if (!geometry || typeof geometry.getAttribute !== 'function') return
-    const positions = geometry.getAttribute('position')
-    if (!positions) return
-
-    output += 'o ' + (mesh.name || 'mesh') + '\n'
-
-    // vertices (baked to world space, matching three's OBJExporter)
-    for (let i = 0; i < positions.count; i++) {
-      vertex.set(positions.getX(i), positions.getY(i), positions.getZ(i))
-        .applyMatrix4(mesh.matrixWorld)
-      output += 'v ' + vertex.x + ' ' + vertex.y + ' ' + vertex.z + '\n'
+  for (const { vertices } of triangles) {
+    for (const [x, y, z] of vertices) {
+      output += 'v ' + x + ' ' + y + ' ' + z + '\n'
     }
+  }
 
-    // faces (1-based, offset by the vertices already written for earlier meshes)
-    const index = geometry.getIndex()
-    if (index) {
-      for (let i = 0; i < index.count; i += 3) {
-        const a = indexVertex + index.getX(i) + 1
-        const b = indexVertex + index.getX(i + 1) + 1
-        const c = indexVertex + index.getX(i + 2) + 1
-        output += 'f ' + a + ' ' + b + ' ' + c + '\n'
-      }
-    } else {
-      for (let i = 0; i < positions.count; i += 3) {
-        output += 'f ' + (indexVertex + i + 1) + ' ' + (indexVertex + i + 2) + ' ' + (indexVertex + i + 3) + '\n'
-      }
-    }
-
-    indexVertex += positions.count
-  })
+  for (let i = 0; i < triangles.length; i++) {
+    const a = i * 3 + 1
+    output += 'f ' + a + ' ' + (a + 1) + ' ' + (a + 2) + '\n'
+  }
 
   return output
 }
